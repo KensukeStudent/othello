@@ -10,7 +10,7 @@ public class CursorMan : MonoBehaviour
     /// <summary>
     /// カーソル座標
     /// </summary>
-    public Vector3 CursorPos { private set; get; }
+    public static Vector3 CursorPos { private set; get; }
 
     private void Update()
     {
