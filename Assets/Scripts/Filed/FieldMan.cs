@@ -78,8 +78,27 @@ public class FieldMan : MonoBehaviour
     /// </summary>
     CanLocation[,] canLocation = new CanLocation[fieldW, fieldW];
 
+    /// <summary>
+    /// このターンにパスした回数
+    /// </summary>
+    int passCount = 0;
+    /// <summary>
+    /// 黒タイプの石の数
+    /// </summary>
+    int blackStoneCount = 0;
+    /// <summary>
+    /// 白タイプの石の数
+    /// </summary>
+    int whiteStoneCount = 0;
+
+    /// <summary>
+    /// UI管理
+    /// </summary>
+    UIMan uiMan;
+
     private void Start()
     {
+        uiMan = GameObject.FindWithTag("UIMan").GetComponent<UIMan>();
         Initialize();
     }
 
@@ -129,13 +148,21 @@ public class FieldMan : MonoBehaviour
             case GameMode.PlayerTurn:
 
                 //石を置ける個数が1つ以上ならプレイヤーターン
-                gameMode = PlayerPutCheak() == 0 ? GameMode.EnemyTrun : GameMode.PutStone;
+                if (PlayerPutCheak() == 0)
+                {
+                    gameMode = GameMode.EnemyTrun;
+                    passCount++;
+                }
+                else
+                {
+                    gameMode = GameMode.PutStone;
+                }
                 break;
 
             //プレイヤーが石を置く
             case GameMode.PutStone:
 
-                PutStone();
+                PlayerPutStone();
                 break;
 
             //敵のターン
@@ -151,6 +178,8 @@ public class FieldMan : MonoBehaviour
                 break;
         }
     }
+
+    #region プレイヤー処理
 
     /// <summary>
     /// 石を置けるコマをチェック
@@ -253,51 +282,19 @@ public class FieldMan : MonoBehaviour
     /// <summary>
     /// 石を置く
     /// </summary>
-    void PutStone()
+    void PlayerPutStone()
     {
-        var cursor = CursorMan.CursorPos;
-        var x = (int)cursor.x;
-        var y = (int)cursor.z;
+        var location = CursorMan.CursorPos;
+        var x = (int)location.x;
+        var y = (int)location.z;
 
         //マウスカーソルがフィールド内であれば処理
         if (OnArea(x, y) && Input.GetMouseButtonDown(0) && canLocation[x, y].Put)
         {
-            //石を置く
-            fieldStone[x, y].SetStone(Stone.StoneType.Black);
-
-            //石をひっくり返し
-            TrunStone(x, y, Stone.StoneType.Black);
+            PutProsses(x, y);
 
             //カーソルマークを非表示
             CursorMarkHide();
-
-            //敵のターン
-            gameMode = GameMode.EnemyTrun;
-            trun = GoTrun.WhiteTrun;
-        }
-    }
-
-    /// <summary>
-    /// 相手の石をひっくり返す処理
-    /// </summary>
-    void TrunStone(int x, int y, Stone.StoneType stoneType)
-    {
-        var from = new Vector2(x, y);
-
-        for (int i = 0; i < dir.Length; i++)
-        {
-            //座標があるなら
-            if (canLocation[x,y].TrunDirection[i] != Vector2.zero)
-            {
-                //この座標までひっくり返し
-                var to = canLocation[x, y].TrunDirection[i];
-
-                for (Vector2 location = from + dir[i]; location != to; location += dir[i])
-                {
-                    //石をひっくり返し
-                    fieldStone[(int)location.x, (int)location.y].TrunStone(stoneType);
-                }
-            }
         }
     }
 
@@ -313,8 +310,36 @@ public class FieldMan : MonoBehaviour
                 fieldCursor[x, y].Hide();
                 canLocation[x, y].SetPut(false);
             }
-        }     
+        }
     }
+
+    /// <summary>
+    /// カーソルがフィールド範囲ないかを判定
+    /// </summary>
+    bool OnArea(int x, int y)
+    {
+        //①
+        //xが0以上
+        //②
+        //xがfiledW未満
+        //③
+        //yが0以上
+        //④
+        //yがfiledW未満
+        return x >= 0 && x < fieldW && y >= 0 && y < fieldW;
+    }
+
+    /// <summary>
+    /// 石の種類が同じかを判定
+    /// </summary>
+    bool SameTypeStone(int x, int y)
+    {
+        return (int)fieldStone[x, y].Type - 1 == (int)trun;
+    }
+
+    #endregion
+
+    #region 敵AI処理
 
     /// <summary>
     /// 敵の動き
@@ -342,8 +367,6 @@ public class FieldMan : MonoBehaviour
         return putStore;
     }
 
-    Vector2 aa;
-
     /// <summary>
     /// 敵が石を置く
     /// </summary>
@@ -351,51 +374,139 @@ public class FieldMan : MonoBehaviour
     {
         if (putStore.Count != 0)
         {
-            if (Input.GetMouseButtonDown(1))
-            {
-                //ランダムで置く位置を選択
-                var maxCount = putStore.Count;
+            //ランダムで置く位置を選択
+            var maxCount = putStore.Count;
 
-                var putLcation = putStore[Random.Range(0, maxCount)];
-              
-                //石を置く
-                fieldStone[(int)putLcation.x, (int)putLcation.y].SetStone(Stone.StoneType.White);
+            var putLcation = putStore[Random.Range(0, maxCount)];
 
-                //石をひっくり返し
-                TrunStone((int)putLcation.x, (int)putLcation.y, Stone.StoneType.White);
-
-                gameMode = GameMode.PlayerTurn;
-                trun = GoTrun.BlackTrun;
-            }
+            PutProsses((int)putLcation.x, (int)putLcation.y);
         }
         else
         {
+            passCount++;
             gameMode = GameMode.PlayerTurn;
             trun = GoTrun.BlackTrun;
+
+            //ゲームオーバー処理
+            GameOver();
+        }
+    }
+
+    #endregion
+
+    /// <summary>
+    /// タイプ別の石をひっくり返す処理
+    /// </summary>
+    void TrunStone(int x, int y, Stone.StoneType stoneType)
+    {
+        var from = new Vector2(x, y);
+
+        for (int i = 0; i < dir.Length; i++)
+        {
+            //座標があるなら
+            if (canLocation[x, y].TrunDirection[i] != Vector2.zero)
+            {
+                //この座標までひっくり返し
+                var to = canLocation[x, y].TrunDirection[i];
+
+                for (Vector2 location = from + dir[i]; location != to; location += dir[i])
+                {
+                    //石をひっくり返し
+                    fieldStone[(int)location.x, (int)location.y].TrunStone(stoneType);
+                }
+            }
         }
     }
 
     /// <summary>
-    /// カーソルがフィールド範囲ないかを判定
+    /// 石配置処理コルーチン
     /// </summary>
-    bool OnArea(int x, int y)
+    void PutProsses(int x, int y)
     {
-        //①
-        //xが0以上
-        //②
-        //xがfiledW未満
-        //③
-        //yが0以上
-        //④
-        //yがfiledW未満
-        return x >= 0 && x < fieldW && y >= 0 && y < fieldW;
+        //ターン別でストーンの種類を変更
+        var stoneType = trun == GoTrun.BlackTrun ?
+            Stone.StoneType.Black
+            :
+            Stone.StoneType.White;
+
+        //石を置く
+        fieldStone[x, y].SetStone(stoneType);
+
+        //石をひっくり返し
+        TrunStone(x, y, stoneType);
+
+        //個数のチェック
+        StoneCountCheak();
+
+        //配置処理退場処理
+        PutExit(stoneType);
     }
 
     /// <summary>
-    /// 石の種類が同じかを判定
+    /// 現在の各石の色の個数をチェック
     /// </summary>
-    bool SameTypeStone(int x,int y)
+    void StoneCountCheak()
     {
-       return (int)fieldStone[x, y].Type - 1 == (int)trun;
+        //0,0～7,7まで探索
+        for (int y = 0; y < fieldW; y++)
+        {
+            for (int x = 0; x < fieldW; x++)
+            {
+                if (fieldStone[x, y].Type == Stone.StoneType.Black)
+                {
+                    blackStoneCount++;
+                }
+                else if (fieldStone[x, y].Type == Stone.StoneType.White)
+                {
+                    whiteStoneCount++;
+                }
+            }
+        }
+
+        uiMan.SetCount(blackStoneCount, whiteStoneCount);
+
+        //個数確認後初期化
+        blackStoneCount = 0;
+        whiteStoneCount = 0;
+    }
+
+    /// <summary>
+    /// 石配置処理後
+    /// </summary>
+    void PutExit(Stone.StoneType stoneType)
+    {
+        switch (stoneType)
+        {
+            case Stone.StoneType.Black:
+                
+                //敵のターン
+                gameMode = GameMode.EnemyTrun;
+                trun = GoTrun.WhiteTrun;
+
+                break;
+            
+            case Stone.StoneType.White:
+
+                //プレイヤーのターン
+                gameMode = GameMode.PlayerTurn;
+                trun = GoTrun.BlackTrun;
+                break;
+        }
+    }
+
+    /// <summary>
+    /// ゲームオーバー処理
+    /// </summary>
+    void GameOver()
+    {
+        //ゲーム終了
+        if (passCount == 2)
+        {
+            gameMode = GameMode.GameOver;
+            uiMan.SetGameOver();
+            return;
+        }
+
+        passCount = 0;
     }
 }
