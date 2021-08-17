@@ -54,4 +54,17 @@ public class Stone : MonoBehaviour
             transform.localEulerAngles = rot;
         }
     }
+
+    /// <summary>
+    /// 石の反転処理
+    /// </summary>
+    public void TrunStone(StoneType type)
+    {
+        Type = type;
+
+        var rot = transform.localEulerAngles;
+        //タイプごとに反転
+        rot.z = type == StoneType.Black ? 180 : 0;
+        transform.localEulerAngles = rot;
+    }
 }
