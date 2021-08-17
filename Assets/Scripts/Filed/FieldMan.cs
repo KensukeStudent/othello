@@ -12,6 +12,7 @@ public class FieldMan : MonoBehaviour
         Initialize,//初期化
         SetStoneCheak,//置ける石をチェック
         PutStone,//プレイヤーが石を置く
+        EnemyTrun,//敵のターン
         GameOver,//ゲーム終了
     }
 
@@ -39,6 +40,11 @@ public class FieldMan : MonoBehaviour
     /// </summary>
     [SerializeField] GameObject stoneObj;
     [SerializeField] GameObject cursorObj;
+    
+    /// <summary>
+    /// フィールド範囲
+    /// </summary>
+    const int fieldW = 8;
 
     /// <summary>
     /// フィールドの石状態
@@ -48,27 +54,26 @@ public class FieldMan : MonoBehaviour
     /// フィールドのカーソル状態
     /// </summary>
     CursorMark[,] fieldCursor = new CursorMark[fieldW, fieldW];
-    /// <summary>
-    /// 石配置可能位置
-    /// </summary>
-    int[,] canLocation = new int[fieldW, fieldW];
 
     /// <summary>
     /// 探索する座標方向
     /// </summary>
-    Vector3[] dir =
+    Vector2[] dir =
     {
-          new Vector3(  0 ,0, 1),  // up
-          new Vector3(  1 ,0, 1),  // up-right
-          new Vector3(  1 ,0, 0),  // right
-          new Vector3(  1 ,0,-1),  // down-right
-          new Vector3(  0 ,0,-1),  // down
-          new Vector3( -1 ,0,-1),  // down-left
-          new Vector3( -1 ,0, 0),  // left
-          new Vector3( -1 ,0, 1),  // up-left
+          new Vector2(  0 , 1),  // up
+          new Vector2(  1 , 1),  // up-right
+          new Vector2(  1 , 0),  // right
+          new Vector2(  1 ,-1),  // down-right
+          new Vector2(  0 ,-1),  // down
+          new Vector2( -1 ,-1),  // down-left
+          new Vector2( -1 , 0),  // left
+          new Vector2( -1 ,1),  // up-left
     };
 
-    const int fieldW = 8;
+    /// <summary>
+    /// 石配置可能位置
+    /// </summary>
+    CanLocation[,] canLocation = new CanLocation[fieldW, fieldW];
 
     private void Start()
     {
@@ -95,6 +100,8 @@ public class FieldMan : MonoBehaviour
                 cursor.Initialize(x, y);
                 //カーソルをセット
                 fieldCursor[x, y] = cursor;
+
+                canLocation[x, y] = new CanLocation();
             }
         }
 
@@ -119,6 +126,7 @@ public class FieldMan : MonoBehaviour
             case GameMode.SetStoneCheak:
 
                 PutStoneCheak();
+                gameMode = GameMode.PutStone;
                 break;
             
             //プレイヤーが石を置く
@@ -126,34 +134,20 @@ public class FieldMan : MonoBehaviour
                 
                 SetStone();
                 break;
-            
+
+            //敵のターン
+            case GameMode.EnemyTrun:
+
+                //置ける位置を探索
+
+                //石をセット
+
+                break;
+
             //勝敗判定
             case GameMode.GameOver:
             
                 break;
-        }
-    }
-
-    /// <summary>
-    /// 石を置く
-    /// </summary>
-    void SetStone()
-    {
-        var cursor = CursorMan.CursorPos;
-        var x = (int)cursor.x;
-        var y = (int)cursor.z;
-
-        //マウスカーソルがフィールド内であれば処理
-        if (OnArea(x, y) && Input.GetMouseButtonDown(0) && canLocation[x, y] == 1)
-        {
-            //石を置く
-            fieldStone[x, y].SetStone(Stone.StoneType.Black);
-
-            //敵AI起動
-
-            gameMode = GameMode.SetStoneCheak;
-            //カーソルマークを非表示
-            CursorMarkHide();
         }
     }
 
@@ -176,8 +170,6 @@ public class FieldMan : MonoBehaviour
                 }
             }
         }
-
-        gameMode = GameMode.PutStone;
     }
 
     /// <summary>
@@ -186,15 +178,19 @@ public class FieldMan : MonoBehaviour
     bool HitStone(int x, int y)
     {
         //この座標から8方向に判定
-        var from = new Vector3(x, 0.05f, y);
+        var from = new Vector3(x, y);
         var ret = false;
 
         for (int i = 0; i < dir.Length; i++)
         {
             //反転できる石があるかをチェック
-            if (FindOtherTypeCheak(dir[i], from, false))
+            var turnCheak = FindOtherTypeCheak(dir[i], from, false);
+            if (turnCheak != Vector2.zero)
             {
-                canLocation[x, y] = 1;
+                //配置可能
+                canLocation[x, y].SetPut(true);
+                //ひっくり返す座標をセット
+                canLocation[x, y].SetTrunDirection(i, turnCheak);
                 ret = true;
             }
         }
@@ -209,37 +205,96 @@ public class FieldMan : MonoBehaviour
     /// <param name="from">現在の判定座標</param>
     /// <param name="insert">別の石種類を挟んだかどうか</param>
     /// <returns></returns>
-    bool FindOtherTypeCheak(Vector3 dir, Vector3 from, bool insert)
+    Vector2 FindOtherTypeCheak(Vector2 dir, Vector2 from, bool insert)
     {
         //次の石の座標
         var to = from + dir;
         var x = (int)to.x;
-        var y = (int)to.z;
-
-        var ret = false;
+        var y = (int)to.y;
 
         //次の座標がフィールド内
         //次のコマ位置に石がある
         if (OnArea(x, y) && fieldStone[x, y].Type != Stone.StoneType.None)
         {
             //判定した石が自分のタイプと同じか
-            if(SameTypeStone(x, y))
+            if (SameTypeStone(x, y))
             {
-                ret = insert ?
-                    //間に反転できる石を挟んでいればtrue
-                    true
-                    : 
-                    //挟まず同じタイプならfalse
-                    false;
+                //間に反転できる石を挟んでいればtrue
+                if (insert)
+                {
+                    return to;
+                }
+                //挟まず同じタイプならfalse
+                else
+                {
+                    return Vector3.zero;
+                }
             }
             else
             {
                 //敵オセロが見つかれば自分のオセロが見つかるまで再帰処理
-               ret = FindOtherTypeCheak(dir, to, true);
+               return FindOtherTypeCheak(dir, to, true);
             }
         }
 
-        return ret;
+        return Vector3.zero;
+    }
+
+    /// <summary>
+    /// 石を置く
+    /// </summary>
+    void SetStone()
+    {
+        var cursor = CursorMan.CursorPos;
+        var x = (int)cursor.x;
+        var y = (int)cursor.z;
+
+        //マウスカーソルがフィールド内であれば処理
+        if (OnArea(x, y) && Input.GetMouseButtonDown(0) && canLocation[x, y].Put)
+        {
+            //ターン別でストーンの種類を変更
+            var stoneType = trun == GoTrun.BlackTrun ?
+                Stone.StoneType.Black
+                :
+                Stone.StoneType.White;
+
+            //石を置く
+            fieldStone[x, y].SetStone(stoneType);
+
+            //石をひっくり返し
+            TrunStone(x, y, stoneType);
+
+            //カーソルマークを非表示
+            CursorMarkHide();
+
+            //敵のターン
+            gameMode = GameMode.EnemyTrun;
+            trun = GoTrun.WhiteTrun;
+        }
+    }
+
+    /// <summary>
+    /// 相手の石をひっくり返す処理
+    /// </summary>
+    void TrunStone(int x, int y, Stone.StoneType stoneType)
+    {
+        var from = new Vector2(x, y);
+
+        for (int i = 0; i < dir.Length; i++)
+        {
+            //座標があるなら
+            if (canLocation[x,y].TrunDirection[i] != Vector2.zero)
+            {
+                //この座標までひっくり返し
+                var to = canLocation[x, y].TrunDirection[i];
+
+                for (Vector2 location = from + dir[i]; location != to; location += dir[i])
+                {
+                    //石をひっくり返し
+                    fieldStone[(int)location.x, (int)location.y].SetStone(stoneType);
+                }
+            }
+        }
     }
 
     /// <summary>
@@ -252,8 +307,17 @@ public class FieldMan : MonoBehaviour
             for (int x = 0; x < fieldW; x++)
             {
                 fieldCursor[x, y].Hide();
+                canLocation[x, y].SetPut(false);
             }
         }     
+    }
+
+    /// <summary>
+    /// 敵の動き
+    /// </summary>
+    void EnemyTurn()
+    {
+
     }
 
     /// <summary>
