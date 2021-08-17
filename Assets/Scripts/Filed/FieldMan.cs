@@ -128,8 +128,8 @@ public class FieldMan : MonoBehaviour
             //置ける石を判定
             case GameMode.PlayerTurn:
 
-                PlayerPutCheak();
-                gameMode = GameMode.PutStone;
+                //石を置ける個数が1つ以上ならプレイヤーターン
+                gameMode = PlayerPutCheak() == 0 ? GameMode.EnemyTrun : GameMode.PutStone;
                 break;
 
             //プレイヤーが石を置く
@@ -155,8 +155,11 @@ public class FieldMan : MonoBehaviour
     /// <summary>
     /// 石を置けるコマをチェック
     /// </summary>
-    void PlayerPutCheak()
+    int PlayerPutCheak()
     {
+        //コマを置ける個数
+        var putCount = 0;
+
         //0,0～7,7まで探索
         for (int y = 0; y < fieldW; y++)
         {
@@ -168,9 +171,12 @@ public class FieldMan : MonoBehaviour
                 {
                     //カーソル表示
                     fieldCursor[x, y].gameObject.SetActive(true);
+                    putCount++;
                 }
             }
         }
+
+        return putCount;
     }
 
     /// <summary>
@@ -186,6 +192,9 @@ public class FieldMan : MonoBehaviour
         {
             //反転できる石があるかをチェック
             var turnCheak = FindOtherTypeCheak(dir[i], from, false);
+            //初期化
+            canLocation[x, y].SetTrunDirection(i, Vector2.zero);
+
             if (turnCheak != Vector2.zero)
             {
                 //配置可能
@@ -253,17 +262,11 @@ public class FieldMan : MonoBehaviour
         //マウスカーソルがフィールド内であれば処理
         if (OnArea(x, y) && Input.GetMouseButtonDown(0) && canLocation[x, y].Put)
         {
-            //ターン別でストーンの種類を変更
-            var stoneType = trun == GoTrun.BlackTrun ?
-                Stone.StoneType.Black
-                :
-                Stone.StoneType.White;
-
             //石を置く
-            fieldStone[x, y].SetStone(stoneType);
+            fieldStone[x, y].SetStone(Stone.StoneType.Black);
 
             //石をひっくり返し
-            TrunStone(x, y, stoneType);
+            TrunStone(x, y, Stone.StoneType.Black);
 
             //カーソルマークを非表示
             CursorMarkHide();
@@ -346,44 +349,27 @@ public class FieldMan : MonoBehaviour
     /// </summary>
     void AIPutStone(List<Vector2> putStore)
     {
-        if(Input.GetMouseButtonDown(1))
+        if (putStore.Count != 0)
         {
-            //ランダムで置く位置を選択
-            var maxCount = putStore.Count;
+            if (Input.GetMouseButtonDown(1))
+            {
+                //ランダムで置く位置を選択
+                var maxCount = putStore.Count;
 
-            //var putLcation = putStore[Random.Range(0, maxCount)];
-            aa = putStore[Random.Range(0, maxCount)];
-            
-            //ターン別でストーンの種類を変更
-            var stoneType = trun == GoTrun.BlackTrun ?
-                Stone.StoneType.Black
-                :
-                Stone.StoneType.White;
+                var putLcation = putStore[Random.Range(0, maxCount)];
+              
+                //石を置く
+                fieldStone[(int)putLcation.x, (int)putLcation.y].SetStone(Stone.StoneType.White);
 
-            //石を置く
-            fieldStone[(int)aa.x, (int)aa.y].SetStone(stoneType);
+                //石をひっくり返し
+                TrunStone((int)putLcation.x, (int)putLcation.y, Stone.StoneType.White);
 
-            ////石を置く
-            //fieldStone[(int)putLcation.x, (int)putLcation.y].SetStone(stoneType);
-
-            ////石をひっくり返し
-            //TrunStone((int)putLcation.x, (int)putLcation.y, stoneType);
-
-            //gameMode = GameMode.PlayerTurn;
-            //trun = GoTrun.BlackTrun;
+                gameMode = GameMode.PlayerTurn;
+                trun = GoTrun.BlackTrun;
+            }
         }
-
-        if(Input.GetMouseButtonDown(0))
+        else
         {
-            //ターン別でストーンの種類を変更
-            var stoneType = trun == GoTrun.BlackTrun ?
-                Stone.StoneType.Black
-                :
-                Stone.StoneType.White;
-
-            //石をひっくり返し
-            TrunStone((int)aa.x, (int)aa.y, stoneType);
-
             gameMode = GameMode.PlayerTurn;
             trun = GoTrun.BlackTrun;
         }

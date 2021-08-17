@@ -28,4 +28,12 @@ public class CanLocation
     {
         TrunDirection[directionNo] = toDirection;
     }
+
+    public void Reset()
+    {
+        for (int i = 0; i < TrunDirection.Length; i++)
+        {
+            TrunDirection[i] = Vector2.zero;
+        }
+    }
 }
