@@ -7,11 +7,42 @@ using UnityEngine;
 /// </summary>
 public class Stone : MonoBehaviour
 {
+    public enum DirType
+    {
+        UP,
+        UP_RIGHT,
+        RIGHT,
+        DOWN_RIGHT,
+        DONW,
+        DOWN_LEFT,
+        LEFT,
+        UP_LEFT
+    }
+
+    DirType aa = DirType.DONW;
+
     /// <summary>
-    /// 石色変更
+    /// 石のサイズ
     /// </summary>
-    bool changeColor = false;
     const float size = 1;
+
+    /// <summary>
+    /// ひっくり返しフラグ
+    /// </summary>
+    bool trunFlag = false;
+    /// <summary>
+    /// 0.5秒かけて回転する
+    /// </summary>
+    const float rotSecond = 180.0f / 0.5f; 
+    /// <summary>
+    /// 回転が始まるラグ
+    /// </summary>
+    float rotTimeLag = 0.0f;
+
+    /// <summary>
+    /// 回転方向
+    /// </summary>
+    Vector2 rotDirection;
 
     /// <summary>
     /// 石のタイプ基盤
@@ -66,5 +97,69 @@ public class Stone : MonoBehaviour
         //タイプごとに反転
         rot.z = type == StoneType.Black ? 180 : 0;
         transform.localEulerAngles = rot;
+    }
+
+    /// <summary>
+    /// 反転フラグセット
+    /// </summary>
+    public void TrunSet(float rotTimeLag , DirType dirType)
+    {
+        trunFlag = true;
+        this.rotTimeLag = rotTimeLag;
+
+        int x = 0;
+
+        //回転方向を指定
+        switch (dirType)
+        {
+            //(  0 , 1),
+            case DirType.UP:
+                
+                break;
+
+            //(  1 , 1)
+            case DirType.UP_RIGHT:
+                
+                break;
+
+            //(  1 , 0)
+            case DirType.RIGHT:
+                
+                break;
+
+            //(  1 ,-1)
+            case DirType.DOWN_RIGHT:
+                
+                break;
+
+            //(  0 ,-1)
+            case DirType.DONW:
+                
+                break;
+
+            //( -1 ,-1)
+            case DirType.DOWN_LEFT:
+                
+                break;
+
+            //( -1 , 0)
+            case DirType.LEFT:
+                
+                break;
+
+            //(-1, 1)
+            case DirType.UP_LEFT:
+
+                break;
+        }
+    }
+
+    /// <summary>
+    /// 回転アニメーション再生
+    /// </summary>
+    public void TrunAnimation()
+    {
+        //どの方向に回転するか
+
     }
 }

@@ -200,6 +200,9 @@ public class FieldMan : MonoBehaviour
                 {
                     //カーソル表示
                     fieldCursor[x, y].gameObject.SetActive(true);
+                    //配置可能
+                    canLocation[x, y].SetPut(true);
+
                     putCount++;
                 }
             }
@@ -222,14 +225,10 @@ public class FieldMan : MonoBehaviour
             //反転できる石があるかをチェック
             var turnCheak = FindOtherTypeCheak(dir[i], from, false);
             //初期化
-            canLocation[x, y].SetTrunDirection(i, Vector2.zero);
+            canLocation[x, y].SetTrunDirection(i, turnCheak);
 
             if (turnCheak != Vector2.zero)
             {
-                //配置可能
-                canLocation[x, y].SetPut(true);
-                //ひっくり返す座標をセット
-                canLocation[x, y].SetTrunDirection(i, turnCheak);
                 ret = true;
             }
         }
@@ -383,12 +382,17 @@ public class FieldMan : MonoBehaviour
         }
         else
         {
-            passCount++;
             gameMode = GameMode.PlayerTurn;
             trun = GoTrun.BlackTrun;
+            passCount++;
 
-            //ゲームオーバー処理
-            GameOver();
+            if(passCount == 2)
+            {
+                //ゲームオーバー処理
+                GameOver();
+            }
+
+            passCount = 0;
         }
     }
 
@@ -438,6 +442,9 @@ public class FieldMan : MonoBehaviour
         //個数のチェック
         StoneCountCheak();
 
+        //GameOverならリターン
+        if (gameMode == GameMode.GameOver) return;
+
         //配置処理退場処理
         PutExit(stoneType);
     }
@@ -447,6 +454,9 @@ public class FieldMan : MonoBehaviour
     /// </summary>
     void StoneCountCheak()
     {
+        //フィールド上の石の個数
+        var fliedNoneCount = 0;
+
         //0,0～7,7まで探索
         for (int y = 0; y < fieldW; y++)
         {
@@ -460,10 +470,23 @@ public class FieldMan : MonoBehaviour
                 {
                     whiteStoneCount++;
                 }
+                else
+                {
+                    fliedNoneCount++;
+                }
             }
         }
 
+        //表示カウントセット
         uiMan.SetCount(blackStoneCount, whiteStoneCount);
+
+        //フィールド全てに石が埋まった
+        //どちらかの石が０個
+        if(fliedNoneCount == 0 || blackStoneCount == 0 || whiteStoneCount == 0)
+        {
+            GameOver();
+            return;
+        }
 
         //個数確認後初期化
         blackStoneCount = 0;
@@ -500,13 +523,7 @@ public class FieldMan : MonoBehaviour
     void GameOver()
     {
         //ゲーム終了
-        if (passCount == 2)
-        {
-            gameMode = GameMode.GameOver;
-            uiMan.SetGameOver();
-            return;
-        }
-
-        passCount = 0;
+        gameMode = GameMode.GameOver;
+        uiMan.SetGameOver();
     }
 }
