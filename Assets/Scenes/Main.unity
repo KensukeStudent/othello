@@ -508,20 +508,25 @@ PrefabInstance:
       propertyPath: m_Name
       value: Stone
       objectReference: {fileID: 0}
+    - target: {fileID: 1684629288547280256, guid: fd6a824535018664683b189c7a4c7ef0,
+        type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 1684629288547280257, guid: fd6a824535018664683b189c7a4c7ef0,
         type: 3}
       propertyPath: m_LocalPosition.x
-      value: 1.565
+      value: 1.5
       objectReference: {fileID: 0}
     - target: {fileID: 1684629288547280257, guid: fd6a824535018664683b189c7a4c7ef0,
         type: 3}
       propertyPath: m_LocalPosition.y
-      value: 0.68908226
+      value: 0.5
       objectReference: {fileID: 0}
     - target: {fileID: 1684629288547280257, guid: fd6a824535018664683b189c7a4c7ef0,
         type: 3}
       propertyPath: m_LocalPosition.z
-      value: 1.477
+      value: 1.5
       objectReference: {fileID: 0}
     - target: {fileID: 1684629288547280257, guid: fd6a824535018664683b189c7a4c7ef0,
         type: 3}

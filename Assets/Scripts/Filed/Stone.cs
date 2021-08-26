@@ -1,4 +1,5 @@
 ﻿using System.Collections;
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -7,20 +8,6 @@ using UnityEngine;
 /// </summary>
 public class Stone : MonoBehaviour
 {
-    public enum DirType
-    {
-        UP,
-        UP_RIGHT,
-        RIGHT,
-        DOWN_RIGHT,
-        DONW,
-        DOWN_LEFT,
-        LEFT,
-        UP_LEFT
-    }
-
-    DirType aa = DirType.DONW;
-
     /// <summary>
     /// 石のサイズ
     /// </summary>
@@ -29,20 +16,23 @@ public class Stone : MonoBehaviour
     /// <summary>
     /// ひっくり返しフラグ
     /// </summary>
-    bool trunFlag = false;
+    public bool TrunFlag { private set; get; } = false;
     /// <summary>
     /// 0.5秒かけて回転する
     /// </summary>
-    const float rotSecond = 180.0f / 0.5f; 
+    readonly float rotSecond = 180.0f / 0.2f; 
     /// <summary>
     /// 回転が始まるラグ
     /// </summary>
     float rotTimeLag = 0.0f;
-
     /// <summary>
-    /// 回転方向
+    /// 計測
     /// </summary>
-    Vector2 rotDirection;
+    float timer = 0.0f;
+    /// <summary>
+    /// 回転角度制限
+    /// </summary>
+    float limitRot = 0.0f;
 
     /// <summary>
     /// 石のタイプ基盤
@@ -53,7 +43,6 @@ public class Stone : MonoBehaviour
         Black,//黒
         White//白
     }
-
     /// <summary>
     /// 石タイプ
     /// </summary>
@@ -66,7 +55,7 @@ public class Stone : MonoBehaviour
     {
         gameObject.SetActive(false);
         Type = StoneType.None;
-        const float y = 0.1f;
+        const float y = 0.5f;
         transform.position = new Vector3(x + size / 2, y, z + size / 2);
     }
 
@@ -87,71 +76,18 @@ public class Stone : MonoBehaviour
     }
 
     /// <summary>
-    /// 石の反転処理
+    /// 反転情報セット
     /// </summary>
-    public void TrunStone(StoneType type)
+    public void SetTrun(float rotTimeLag , Vector2 rotDirection)
     {
-        Type = type;
-
-        var rot = transform.localEulerAngles;
-        //タイプごとに反転
-        rot.z = type == StoneType.Black ? 180 : 0;
-        transform.localEulerAngles = rot;
-    }
-
-    /// <summary>
-    /// 反転フラグセット
-    /// </summary>
-    public void TrunSet(float rotTimeLag , DirType dirType)
-    {
-        trunFlag = true;
+        //回転開始フラグ
+        TrunFlag = true;
+        //回転開始タイムラグ
         this.rotTimeLag = rotTimeLag;
-
-        int x = 0;
-
-        //回転方向を指定
-        switch (dirType)
-        {
-            //(  0 , 1),
-            case DirType.UP:
-                
-                break;
-
-            //(  1 , 1)
-            case DirType.UP_RIGHT:
-                
-                break;
-
-            //(  1 , 0)
-            case DirType.RIGHT:
-                
-                break;
-
-            //(  1 ,-1)
-            case DirType.DOWN_RIGHT:
-                
-                break;
-
-            //(  0 ,-1)
-            case DirType.DONW:
-                
-                break;
-
-            //( -1 ,-1)
-            case DirType.DOWN_LEFT:
-                
-                break;
-
-            //( -1 , 0)
-            case DirType.LEFT:
-                
-                break;
-
-            //(-1, 1)
-            case DirType.UP_LEFT:
-
-                break;
-        }
+        //回転前の向き方向
+        transform.localEulerAngles = new Vector3(rotDirection.x, rotDirection.y, transform.localEulerAngles.z);
+        //回転角度制限 ---> 猶予値として５設ける
+        limitRot = Type == StoneType.Black ? 360.0f + rotSecond : 180.0f + rotSecond;
     }
 
     /// <summary>
@@ -160,6 +96,25 @@ public class Stone : MonoBehaviour
     public void TrunAnimation()
     {
         //どの方向に回転するか
+        if (!TrunFlag) return;
 
+        timer += Time.deltaTime;
+
+        if(timer >= rotTimeLag)
+        {
+            var rot = transform.localEulerAngles;
+            rot.z += Time.deltaTime * rotSecond;
+
+            //余分な５の値を引く
+            if(rot.z % limitRot > limitRot - rotSecond)
+            {
+                TrunFlag = false;
+                timer = 0.0f;
+                rot.z = Type == StoneType.Black ? 0.0f : 180.0f;
+                Type = Type == StoneType.Black ? StoneType.White : StoneType.Black;
+            }
+
+            transform.localEulerAngles = rot;
+        }
     }
 }

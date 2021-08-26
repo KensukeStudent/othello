@@ -1,4 +1,5 @@
 ﻿using System.Collections;
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -79,6 +80,15 @@ public class FieldMan : MonoBehaviour
     CanLocation[,] canLocation = new CanLocation[fieldW, fieldW];
 
     /// <summary>
+    /// 石の情報があるクラス
+    /// </summary>
+    StoneMan stoneMan = new StoneMan();
+    /// <summary>
+    /// 石回転アニメーション中
+    /// </summary>
+    bool trunStones = false;
+
+    /// <summary>
     /// このターンにパスした回数
     /// </summary>
     int passCount = 0;
@@ -136,6 +146,26 @@ public class FieldMan : MonoBehaviour
 
     private void Update()
     {
+        if (trunStones)
+        {
+            //現在アニメーション中
+            if(stoneMan.TrunStones())
+            {
+                trunStones = false;
+            }
+
+            return;
+        }
+
+        //操作可能
+        InputMode();
+    }
+
+    /// <summary>
+    /// 操作モード
+    /// </summary>
+    void InputMode()
+    {
         switch (gameMode)
         {
             //初期化
@@ -143,7 +173,7 @@ public class FieldMan : MonoBehaviour
 
                 gameMode = GameMode.PlayerTurn;
                 break;
-            
+
             //置ける石を判定
             case GameMode.PlayerTurn:
 
@@ -174,7 +204,7 @@ public class FieldMan : MonoBehaviour
 
             //勝敗判定
             case GameMode.GameOver:
-            
+
                 break;
         }
     }
@@ -376,7 +406,7 @@ public class FieldMan : MonoBehaviour
             //ランダムで置く位置を選択
             var maxCount = putStore.Count;
 
-            var putLcation = putStore[Random.Range(0, maxCount)];
+            var putLcation = putStore[UnityEngine.Random.Range(0, maxCount)];
 
             PutProsses((int)putLcation.x, (int)putLcation.y);
         }
@@ -404,6 +434,7 @@ public class FieldMan : MonoBehaviour
     void TrunStone(int x, int y, Stone.StoneType stoneType)
     {
         var from = new Vector2(x, y);
+        var trunLag = 0.025f;
 
         for (int i = 0; i < dir.Length; i++)
         {
@@ -412,14 +443,24 @@ public class FieldMan : MonoBehaviour
             {
                 //この座標までひっくり返し
                 var to = canLocation[x, y].TrunDirection[i];
+                //toまでの距離
+                var distanceTo = 0;
 
                 for (Vector2 location = from + dir[i]; location != to; location += dir[i])
                 {
-                    //石をひっくり返し
-                    fieldStone[(int)location.x, (int)location.y].TrunStone(stoneType);
+                    var stone = fieldStone[(int)location.x, (int)location.y];
+                    //石の回転情報をセット
+                    stone.SetTrun(trunLag * distanceTo, stoneMan.GetDirection(i));
+
+                    //回転する石を管理庫にセット
+                    stoneMan.SetTrunStone(stone);
+                    
+                    distanceTo++;
                 }
             }
         }
+
+        trunStones = true;
     }
 
     /// <summary>
