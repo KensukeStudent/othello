@@ -146,12 +146,17 @@ public class FieldMan : MonoBehaviour
 
     private void Update()
     {
+        if (gameMode == GameMode.GameOver) return;
+
         if (trunStones)
         {
             //現在アニメーション中
             if(stoneMan.TrunStones())
             {
                 trunStones = false;
+
+                //個数のチェック
+                StoneCountCheak();
             }
 
             return;
@@ -200,11 +205,6 @@ public class FieldMan : MonoBehaviour
 
                 //石をセット
                 AIPutStone(AIPutCheak());
-                break;
-
-            //勝敗判定
-            case GameMode.GameOver:
-
                 break;
         }
     }
@@ -479,12 +479,6 @@ public class FieldMan : MonoBehaviour
 
         //石をひっくり返し
         TrunStone(x, y, stoneType);
-
-        //個数のチェック
-        StoneCountCheak();
-
-        //GameOverならリターン
-        if (gameMode == GameMode.GameOver) return;
 
         //配置処理退場処理
         PutExit(stoneType);

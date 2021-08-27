@@ -48,15 +48,22 @@ public class Stone : MonoBehaviour
     /// </summary>
     public StoneType Type { set; get; } = StoneType.None;
 
+    [SerializeField] AudioClip trunClip;
+    AudioSource aud;
+
     /// <summary>
     /// 初期化
     /// </summary>
     public void Initialize(float x, float z)
     {
         gameObject.SetActive(false);
+        
         Type = StoneType.None;
+        
         const float y = 0.5f;
         transform.position = new Vector3(x + size / 2, y, z + size / 2);
+
+        aud = GetComponent<AudioSource>();
     }
 
     /// <summary>
@@ -111,7 +118,12 @@ public class Stone : MonoBehaviour
                 TrunFlag = false;
                 timer = 0.0f;
                 rot.z = Type == StoneType.Black ? 0.0f : 180.0f;
+
+                var t = Type;
                 Type = Type == StoneType.Black ? StoneType.White : StoneType.Black;
+                if (t == Type) Debug.LogError("バグ");
+
+                aud.PlayOneShot(trunClip);
             }
 
             transform.localEulerAngles = rot;
